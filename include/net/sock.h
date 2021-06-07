@@ -812,27 +812,41 @@ static inline int sk_backlog_rcv(struct sock *sk, struct sk_buff *skb)
 	return sk->sk_backlog_rcv(sk, skb);
 }
 
-static inline void sock_rps_record_flow(const struct sock *sk)
+static inline void sock_rps_record_flow_hash(__u32 hash)
 {
 #ifdef CONFIG_RPS
 	struct rps_sock_flow_table *sock_flow_table;
 
 	rcu_read_lock();
 	sock_flow_table = rcu_dereference(rps_sock_flow_table);
-	rps_record_sock_flow(sock_flow_table, sk->sk_rxhash);
+	rps_record_sock_flow(sock_flow_table, hash);
 	rcu_read_unlock();
+#endif
+}
+
+static inline void sock_rps_reset_flow_hash(__u32 hash)
+{
+#ifdef CONFIG_RPS
+	struct rps_sock_flow_table *sock_flow_table;
+
+	rcu_read_lock();
+	sock_flow_table = rcu_dereference(rps_sock_flow_table);
+	rps_reset_sock_flow(sock_flow_table, hash);
+	rcu_read_unlock();
+#endif
+}
+
+static inline void sock_rps_record_flow(const struct sock *sk)
+{
+#ifdef CONFIG_RPS
+	sock_rps_record_flow_hash(sk->sk_rxhash);
 #endif
 }
 
 static inline void sock_rps_reset_flow(const struct sock *sk)
 {
 #ifdef CONFIG_RPS
-	struct rps_sock_flow_table *sock_flow_table;
-
-	rcu_read_lock();
-	sock_flow_table = rcu_dereference(rps_sock_flow_table);
-	rps_reset_sock_flow(sock_flow_table, sk->sk_rxhash);
-	rcu_read_unlock();
+	sock_rps_reset_flow_hash(sk->sk_rxhash);
 #endif
 }
 
@@ -2293,6 +2307,8 @@ bool sk_ns_capable(const struct sock *sk,
 		   struct user_namespace *user_ns, int cap);
 bool sk_capable(const struct sock *sk, int cap);
 bool sk_net_capable(const struct sock *sk, int cap);
+extern int sock_recv_errqueue(struct sock *sk, struct msghdr *msg, int len,
+			      int level, int type);
 
 /*
  *	Enable debug/info messages
