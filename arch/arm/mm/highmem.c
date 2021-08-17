@@ -19,34 +19,13 @@
 #include <asm/tlbflush.h>
 #include "mm.h"
 
-void *kmap(struct page *page)
-{
-	might_sleep();
-	if (!PageHighMem(page))
-		return page_address(page);
-	return kmap_high(page);
-}
-EXPORT_SYMBOL(kmap);
 
-void kunmap(struct page *page)
-{
-	BUG_ON(in_interrupt());
-	if (!PageHighMem(page))
-		return;
-	kunmap_high(page);
-}
-EXPORT_SYMBOL(kunmap);
-
-void *kmap_atomic(struct page *page)
+void *kmap_atomic_high_prot(struct page *page, pgprot_t prot)
 {
 	unsigned int idx;
 	unsigned long vaddr;
 	void *kmap;
 	int type;
-
-	pagefault_disable();
-	if (!PageHighMem(page))
-		return page_address(page);
 
 #ifdef CONFIG_DEBUG_HIGHMEM
 	/*
@@ -78,12 +57,13 @@ void *kmap_atomic(struct page *page)
 	 * with the new mapping.
 	 */
 	set_top_pte(vaddr, mk_pte(page, kmap_prot));
+	//set_fixmap_pte(idx, mk_pte(page, prot));
 
 	return (void *)vaddr;
 }
-EXPORT_SYMBOL(kmap_atomic);
+EXPORT_SYMBOL(kmap_atomic_high_prot);
 
-void __kunmap_atomic(void *kvaddr)
+void kunmap_atomic_high(void *kvaddr)
 {
 	unsigned long vaddr = (unsigned long) kvaddr & PAGE_MASK;
 	int idx, type;
@@ -105,15 +85,15 @@ void __kunmap_atomic(void *kvaddr)
 		/* this address was obtained through kmap_high_get() */
 		kunmap_high(pte_page(pkmap_page_table[PKMAP_NR(vaddr)]));
 	}
-	pagefault_enable();
 }
-EXPORT_SYMBOL(__kunmap_atomic);
+EXPORT_SYMBOL(kunmap_atomic_high);
 
 void *kmap_atomic_pfn(unsigned long pfn)
 {
 	unsigned long vaddr;
 	int idx, type;
 
+	preempt_disable();
 	pagefault_disable();
 
 	type = kmap_atomic_idx_push();

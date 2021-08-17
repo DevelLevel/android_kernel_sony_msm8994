@@ -142,14 +142,14 @@ static inline void kunmap(struct page *page)
 
 static inline void *kmap_atomic(struct page *page)
 {
+	preempt_disable();
 	pagefault_disable();
 	return page_address(page);
 }
 
-static inline void __kunmap_atomic(void *addr)
+static inline void kunmap_atomic_high(void *addr)
 {
 	flush_kernel_dcache_page_addr(addr);
-	pagefault_enable();
 }
 
 #define kmap_atomic_prot(page, prot)	kmap_atomic(page)

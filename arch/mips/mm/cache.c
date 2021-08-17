@@ -15,6 +15,7 @@
 #include <linux/sched.h>
 #include <linux/syscalls.h>
 #include <linux/mm.h>
+#include <linux/highmem.h>
 
 #include <asm/cacheflush.h>
 #include <asm/processor.h>
@@ -97,6 +98,9 @@ void __flush_dcache_page(struct page *page)
 	 */
 	addr = (unsigned long) page_address(page);
 	flush_data_cache_page(addr);
+
+	if (PageHighMem(page))
+		kunmap_atomic((void *)addr);
 }
 
 EXPORT_SYMBOL(__flush_dcache_page);
@@ -134,6 +138,10 @@ void __update_cache(struct vm_area_struct *vma, unsigned long address,
 		addr = (unsigned long) page_address(page);
 		if (exec || pages_do_alias(addr, address & PAGE_MASK))
 			flush_data_cache_page(addr);
+
+		if (PageHighMem(page))
+			kunmap_atomic((void *)addr);
+
 		ClearPageDcacheDirty(page);
 	}
 }

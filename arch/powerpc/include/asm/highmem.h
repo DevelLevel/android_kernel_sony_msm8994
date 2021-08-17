@@ -58,30 +58,19 @@ extern pte_t *pkmap_page_table;
 #define PKMAP_NR(virt)  ((virt-PKMAP_BASE) >> PAGE_SHIFT)
 #define PKMAP_ADDR(nr)  (PKMAP_BASE + ((nr) << PAGE_SHIFT))
 
-extern void *kmap_high(struct page *page);
-extern void kunmap_high(struct page *page);
-extern void *kmap_atomic_prot(struct page *page, pgprot_t prot);
-extern void __kunmap_atomic(void *kvaddr);
-
-static inline void *kmap(struct page *page)
+static inline void *kmap_atomic_prot(struct page *page, pgprot_t prot)
 {
-	might_sleep();
+	preempt_disable();
+	pagefault_disable();
 	if (!PageHighMem(page))
 		return page_address(page);
-	return kmap_high(page);
+
+	return kmap_atomic_high_prot(page, prot);
 }
 
-static inline void kunmap(struct page *page)
+static inline void *kmap_atomic_high(struct page *page)
 {
-	BUG_ON(in_interrupt());
-	if (!PageHighMem(page))
-		return;
-	kunmap_high(page);
-}
-
-static inline void *kmap_atomic(struct page *page)
-{
-	return kmap_atomic_prot(page, kmap_prot);
+	return kmap_atomic_high_prot(page, kmap_prot);
 }
 
 static inline struct page *kmap_atomic_to_page(void *ptr)

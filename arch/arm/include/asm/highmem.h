@@ -9,8 +9,6 @@
 #define PKMAP_NR(virt)		(((virt) - PKMAP_BASE) >> PAGE_SHIFT)
 #define PKMAP_ADDR(nr)		(PKMAP_BASE + ((nr) << PAGE_SHIFT))
 
-#define kmap_prot		PAGE_KERNEL
-
 #define flush_cache_kmaps() \
 	do { \
 		if (cache_is_vivt()) \
@@ -18,9 +16,6 @@
 	} while (0)
 
 extern pte_t *pkmap_page_table;
-
-extern void *kmap_high(struct page *page);
-extern void kunmap_high(struct page *page);
 
 /*
  * The reason for kmap_high_get() is to ensure that the currently kmap'd
@@ -62,10 +57,6 @@ static inline void *kmap_high_get(struct page *page)
  * when CONFIG_HIGHMEM is not set.
  */
 #ifdef CONFIG_HIGHMEM
-extern void *kmap(struct page *page);
-extern void kunmap(struct page *page);
-extern void *kmap_atomic(struct page *page);
-extern void __kunmap_atomic(void *kvaddr);
 extern void *kmap_atomic_pfn(unsigned long pfn);
 extern struct page *kmap_atomic_to_page(const void *ptr);
 #endif

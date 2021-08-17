@@ -38,6 +38,21 @@ struct seq_operations {
 #define SEQ_SKIP 1
 
 /**
+ * seq_has_overflowed - check if the buffer has overflowed
+ * @m: the seq_file handle
+ *
+ * seq_files have a buffer which may overflow. When this happens a larger
+ * buffer is reallocated and all the data will be printed again.
+ * The overflow state is true when m->count == m->size.
+ *
+ * Returns true if the buffer received more than it can hold.
+ */
+static inline bool seq_has_overflowed(struct seq_file *m)
+{
+	return m->count == m->size;
+}
+
+/**
  * seq_get_buf - get buffer to write arbitrary data to
  * @m: the seq_file handle
  * @bufp: the beginning of the buffer is stored here
@@ -142,6 +157,20 @@ int seq_put_decimal_ull(struct seq_file *m, char delimiter,
 			unsigned long long num);
 int seq_put_decimal_ll(struct seq_file *m, char delimiter,
 			long long num);
+
+#define DEFINE_SHOW_ATTRIBUTE(__name)					\
+static int __name ## _open(struct inode *inode, struct file *file)	\
+{									\
+	return single_open(file, __name ## _show, inode->i_private);	\
+}									\
+									\
+static const struct file_operations __name ## _fops = {			\
+	.owner		= THIS_MODULE,					\
+	.open		= __name ## _open,				\
+	.read		= seq_read,					\
+	.llseek		= seq_lseek,					\
+	.release	= single_release,				\
+}
 
 static inline struct user_namespace *seq_user_ns(struct seq_file *seq)
 {
